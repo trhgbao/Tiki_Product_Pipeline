@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # --- SERVICE DATABASE ĐÃ ĐƯỢC THAY ĐỔI ---
+  db:
+    image: postgres:15-alpine # Dùng image Alpine rất nhẹ và khởi động nhanh
+    container_name: tiki-postgres-db
+    environment:
+      POSTGRES_USER: tiki_user
+      POSTGRES_PASSWORD: Bao01052005@
+      POSTGRES_DB: tiki_data
+    ports:
+      - "5432:5432" # Cổng mặc định của PostgreSQL
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tiki_user -d tiki_data"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s # PostgreSQL khởi động rất nhanh
+
+  # --- SERVICE SELENIUM GIỮ NGUYÊN ---
+  selenium:
+    image: selenium/standalone-chrome:latest
+    container_name: tiki-selenium-chrome
+    shm_size: 2g
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4444/wd/hub/status"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  # --- SERVICE APP GIỮ NGUYÊN CÁCH PHỤ THUỘC ---
+  app:
+    build: .
+    container_name: tiki-scraper-app
+    depends_on:
+      db:
+        condition: service_healthy
+      selenium:
+        condition: service_healthy
+    volumes:
+      - .:/app
+
+volumes:
+  postgres_data:

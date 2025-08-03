@@ -1,4 +1,5 @@
 from selenium import webdriver
+from selenium.webdriver import Remote
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -18,22 +19,25 @@ class TikiScraper:
     It uses a hybrid approach: Selenium for navigating listing pages and
     direct requests/API calls for fetching detailed information to optimize performance.
     """
-    def __init__(self, driver_path):
-        """Initializes the scraper with the path to the WebDriver."""
-        if not os.path.exists(driver_path):
-            raise FileNotFoundError(f"ChromeDriver not found at path: {driver_path}")
 
-        # Configure Selenium WebDriver
-        self.service = Service(executable_path=driver_path)
+    def __init__(self): 
+        """Initializes the scraper for a Docker environment."""
+        
         self.options = webdriver.ChromeOptions()
         self.options.add_argument("start-maximized")
         self.options.add_experimental_option("excludeSwitches", ["enable-automation"])
         self.options.add_experimental_option('useAutomationExtension', False)
-
-        self.driver = webdriver.Chrome(service=self.service, options=self.options)
-        self.wait = WebDriverWait(self.driver, 20)
+        
+        # Kết nối đến Selenium Grid đang chạy trong container 'selenium'
+        
+        self.driver = Remote(
+            command_executor='http://selenium:4444/wd/hub',
+            options=self.options
+        )
         self.today = date.today()
-        print("TikiScraper initialized.")
+        
+        self.wait = WebDriverWait(self.driver, 20)
+        print("TikiScraper initialized for Docker environment.")
 
     def _get_page_source(self, url):
         """Navigates to a URL using Selenium, scrolls to load all content, and returns the page source."""
@@ -166,11 +170,11 @@ class TikiScraper:
                                     rating_stars = round((int(match.group(1)) / 100) * 5, 1)
                         
                         scraped_data_from_list_page.append({
-                            'Name': name,
-                            'Price': price,
-                            'Link': link,
-                            'Rating': rating_stars,
-                            'ScrapedDate': datetime.now().strftime('%Y-%m-%d')
+                            'name': name,
+                            'price': price,
+                            'link': link,
+                            'rating': rating_stars,
+                            'scraped_date': datetime.now().strftime('%Y-%m-%d')
                         })
                         all_product_links.append(link)
                     except Exception:
@@ -195,11 +199,10 @@ class TikiScraper:
             seller_id = ids.get('seller_id')
             if seller_id:
                 brand_json = self._get_brand_details_via_api(ids)
-                
                 # Enrich the initial scraped data with new info
                 current_product_record = scraped_data_from_list_page[i]
-                current_product_record['BrandName'] = brand_json['data']['seller'].get('name', 'N/A') if brand_json else 'N/A'
-                current_product_record['SoldCount'] = ids['quantity_sold']
+                current_product_record['brand_name'] = brand_json['data']['seller'].get('name', 'N/A') if brand_json else 'N/A'
+                current_product_record['sold_count'] = ids['quantity_sold']
                 final_products_history.append(current_product_record)
                 
                 # Process and store brand details if it's a new brand
@@ -219,7 +222,7 @@ class TikiScraper:
                         final_brands_details[seller_id] = {
                             'BrandName': seller_data.get('name', 'N/A'),
                             'BrandLink': seller_data.get('url', 'N/A'),
-                            'IsOfficial': 1 if seller_data.get('is_official') else 0,
+                            'IsOfficial': bool(brand_json.get('IsOfficial', False)),
                             'BrandRating': brand_rating,
                             'NumRating': num_rating,
                             'JoinedDate': (self.today - join_days).strftime('%Y-%m-%d'),
@@ -229,5 +232,7 @@ class TikiScraper:
         # --- PHASE 4: Prepare and return DataFrames ---
         brands_df = pd.DataFrame(list(final_brands_details.values()))
         history_df = pd.DataFrame(final_products_history)
-    
+        
+        brands_df.columns = [col.replace(' ', '_').replace('Is', 'is_').replace('Num', 'num_').replace('Link', '_link').replace('Name', '_name').replace('Date', '_date').replace('Rating','_rating') for col in brands_df.columns]
+        history_df.columns = [col.replace(' ', '_').replace('Is', 'is_').replace('Num', 'num_').replace('Link', '_link').replace('Name', '_name').replace('Date', '_date').replace('Rating','_rating') for col in history_df.columns]
         return brands_df, history_df

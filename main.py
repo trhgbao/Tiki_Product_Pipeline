@@ -8,27 +8,13 @@ def run_pipeline():
     
     print("--- Starting Tiki Data Pipeline ---")
     
-    # --- Step 1: Get User Input ---
-    print("Select scraping mode:")
-    print("1. Enter a search keyword (e.g., 'áo thun nam')")
-    print("2. Enter a full Tiki category/search URL")
-    
-    choice = input("Enter your choice (1 or 2): ")
-
-    target_url = None
-    if choice == '1':
-        keyword = input("Please enter the keyword to search for: ")
-        formatted_keyword = quote_plus(keyword)
-        target_url = f"https://tiki.vn/search?q={formatted_keyword}"
-    elif choice == '2':
-        target_url = input("Please enter the full Tiki URL: ")
-    else:
-        print("Invalid choice. Exiting.")
-        return # Exit the function cleanly
+    print("Running in automated mode with a predefined keyword.")
+    formatted_keyword = quote_plus(cf.SEARCH_KEYWORD) 
+    target_url = f"https://tiki.vn/search?q={formatted_keyword}"
 
     # --- Step 2: Scrape Data ---
     if target_url:
-        scraper = TikiScraper(driver_path=cf.DRIVER_PATH)
+        scraper = TikiScraper()
         
         # The scrape method returns two ready-to-use DataFrames
         brands_df, history_df = scraper.scrape(
