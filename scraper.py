@@ -174,7 +174,7 @@ class TikiScraper:
                             'price': price,
                             'link': link,
                             'rating': rating_stars,
-                            'scraped_date': datetime.now().strftime('%Y-%m-%d')
+                            'scraped_date': self.today.strftime('%Y-%m-%d')
                         })
                         all_product_links.append(link)
                     except Exception:
@@ -220,19 +220,19 @@ class TikiScraper:
                                 break
                     
                         final_brands_details[seller_id] = {
-                            'BrandName': seller_data.get('name', 'N/A'),
-                            'BrandLink': seller_data.get('url', 'N/A'),
-                            'IsOfficial': bool(brand_json.get('IsOfficial', False)),
-                            'BrandRating': brand_rating,
-                            'NumRating': num_rating,
-                            'JoinedDate': (self.today - join_days).strftime('%Y-%m-%d'),
-                            'LastScrapedDate': datetime.now().strftime('%Y-%m-%d')
+                            'brand_name': seller_data.get('name', 'N/A'),
+                            'brand_link': seller_data.get('url', 'N/A'),
+                            'is_official': bool(brand_json.get('IsOfficial', False)),
+                            'brand_rating': brand_rating,
+                            'num_rating': num_rating,
+                            'joined_date': (self.today - join_days).strftime('%Y-%m-%d'),
+                            'last_scraped_date': self.today.strftime('%Y-%m-%d')
                         }
         
         # --- PHASE 4: Prepare and return DataFrames ---
         brands_df = pd.DataFrame(list(final_brands_details.values()))
         history_df = pd.DataFrame(final_products_history)
         
-        brands_df.columns = [col.replace(' ', '_').replace('Is', 'is_').replace('Num', 'num_').replace('Link', '_link').replace('Name', '_name').replace('Date', '_date').replace('Rating','_rating') for col in brands_df.columns]
-        history_df.columns = [col.replace(' ', '_').replace('Is', 'is_').replace('Num', 'num_').replace('Link', '_link').replace('Name', '_name').replace('Date', '_date').replace('Rating','_rating') for col in history_df.columns]
+        # brands_df.columns = [col.replace(' ', '_').replace('Is', 'is_').replace('Num', 'num_').replace('Link', '_link').replace('Name', '_name').replace('Date', '_date').replace('Rating','_rating') for col in brands_df.columns]
+        # history_df.columns = [col.replace(' ', '_').replace('Is', 'is_').replace('Num', 'num_').replace('Link', '_link').replace('Name', '_name').replace('Date', '_date').replace('Rating','_rating') for col in history_df.columns]
         return brands_df, history_df
